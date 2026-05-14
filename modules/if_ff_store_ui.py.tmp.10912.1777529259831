@@ -1,0 +1,302 @@
+"""
+IF/FF/Store Forecast UI - Tab 3 components
+"""
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+from modules.phasing_engine import (
+    get_phasing_table_for_display,
+    get_trailing_12_months,
+    calculate_phasing_table
+)
+from modules.if_ff_store_forecast_engine import (
+    build_monthly_data_table,
+    calculate_monthly_baseline_row,
+    format_monthly_data_for_display,
+    REGION_FILTERS
+)
+
+
+def render_control_panel_and_phasing_tables(if_ff_store_data):
+    """
+    Render control panel and phasing tables for Tab 3 - IF/FF/Store Forecast
+
+    Args:
+        if_ff_store_data: DataFrame with IF/FF/Store data
+
+    Returns:
+        Dictionary with control panel settings
+    """
+    st.markdown("### ⚙️ Control Panel")
+
+    # Current Date Display - from maximum date in the data
+    max_date = pd.to_datetime(if_ff_store_data['DT']).max()
+    st.markdown(f"##### Current Date: {max_date.strftime('%Y/%m/%d')}")
+
+    st.markdown("##### Daily Phasing - Baseline Month Selection")
+
+    # Get available months for selection
+    trailing_months = get_trailing_12_months(if_ff_store_data, exclude_current=True)
+
+    # Convert to readable format for display
+    month_options = []
+    month_map = {}
+    for ym in trailing_months:
+        year, month = ym.split('-')
+        month_name = datetime.strptime(month, '%m').strftime('%B')
+        display_name = f"{month_name} {year}"
+        month_options.append(display_name)
+        month_map[display_name] = ym
+
+    # Default to most recent month
+    default_months = [month_options[0]] if month_options else []
+
+    # === IF Section ===
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.markdown("<div style='margin-top: 8px;'><strong>IF:</strong></div>", unsafe_allow_html=True)
+    with col2:
+        if_phasing_months = st.multiselect(
+            "Select baseline months for IF",
+            options=month_options,
+            default=default_months,
+            key="if_phasing_month_selector",
+            label_visibility="collapsed"
+        )
+
+    if_phasing_table = get_phasing_table_for_display(
+        if_ff_store_data,
+        metric_column='IF_N_USD_PLAN',
+        num_months=12,
+        selected_months=[month_map.get(m) for m in if_phasing_months]
+    )
+    st.dataframe(if_phasing_table, use_container_width=True, height=400)
+
+    # === FF Section ===
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.markdown("<div style='margin-top: 8px;'><strong>FF:</strong></div>", unsafe_allow_html=True)
+    with col2:
+        ff_phasing_months = st.multiselect(
+            "Select baseline months for FF",
+            options=month_options,
+            default=default_months,
+            key="ff_phasing_month_selector",
+            label_visibility="collapsed"
+        )
+
+    # Calculate FF non-PL (FF - TTL_PL_FEE)
+    if_ff_store_data_ff = if_ff_store_data.copy()
+    if_ff_store_data_ff['FF_NON_PL'] = (
+        if_ff_store_data_ff['FF_N_USD_PLAN'] - if_ff_store_data_ff['TTL_PL_FEE_N_USD_PLAN']
+    )
+
+    ff_phasing_table = get_phasing_table_for_display(
+        if_ff_store_data_ff,
+        metric_column='FF_NON_PL',
+        num_months=12,
+        selected_months=[month_map.get(m) for m in ff_phasing_months]
+    )
+    st.dataframe(ff_phasing_table, use_container_width=True, height=400)
+
+    # === Store Section ===
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.markdown("<div style='margin-top: 8px;'><strong>Store:</strong></div>", unsafe_allow_html=True)
+    with col2:
+        store_phasing_months = st.multiselect(
+            "Select baseline months for Store",
+            options=month_options,
+            default=default_months,
+            key="store_phasing_month_selector",
+            label_visibility="collapsed"
+        )
+
+    store_phasing_table = get_phasing_table_for_display(
+        if_ff_store_data,
+        metric_column='STORE_FEE_N_USD_PLAN',
+        num_months=12,
+        selected_months=[month_map.get(m) for m in store_phasing_months]
+    )
+    st.dataframe(store_phasing_table, use_container_width=True, height=400)
+
+    # Return settings
+    settings = {
+        'current_date': max_date,
+        'if_phasing_months': [month_map.get(m) for m in if_phasing_months],
+        'ff_phasing_months': [month_map.get(m) for m in ff_phasing_months],
+        'store_phasing_months': [month_map.get(m) for m in store_phasing_months],
+        'if_phasing_months_display': if_phasing_months,
+        'ff_phasing_months_display': ff_phasing_months,
+        'store_phasing_months_display': store_phasing_months
+    }
+
+    return settings
+
+
+def render_fee_forecast_section(
+    fee_type,
+    if_ff_store_data,
+    control_panel_settings,
+    metric_column,
+    fee_display_name,
+    region='ICBT'
+):
+    """
+    Render a fee forecast section for a specific region
+
+    Args:
+        fee_type: Fee type identifier ('IF', 'FF', 'Store')
+        if_ff_store_data: DataFrame with IF/FF/Store data
+        control_panel_settings: Settings from control panel
+        metric_column: Column name for the metric (e.g., 'IF_N_USD_PLAN')
+        fee_display_name: Display name for the fee type (e.g., 'IF (Insertion Fee)')
+        region: Region to forecast ('ICBT', 'GC', 'HIS', 'JPKO')
+    """
+    st.markdown("---")
+    st.markdown(f"### 📊 {fee_display_name} Forecast")
+
+    st.markdown(f"#### {region}")
+
+    # Index Month Selection
+    st.markdown("##### Index Month Selection")
+
+    # Create month options for 2026
+    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    month_options = [f"{name} 2026" for name in month_names]
+    month_values = list(range(1, 13))  # 1-12
+
+    col1, col2, col3, col4 = st.columns([1, 2, 1, 2])
+
+    with col1:
+        st.markdown("<div style='margin-top: 8px;'><strong>Start Month</strong></div>", unsafe_allow_html=True)
+
+    with col2:
+        start_month_display = st.selectbox(
+            "Start Month",
+            options=month_options,
+            index=0,
+            key=f"{fee_type.lower()}_{region.lower()}_start_month",
+            label_visibility="collapsed"
+        )
+        start_month = month_values[month_options.index(start_month_display)]
+
+    with col3:
+        st.markdown("<div style='margin-top: 8px;'><strong>End Month</strong></div>", unsafe_allow_html=True)
+
+    with col4:
+        end_month_display = st.selectbox(
+            "End Month",
+            options=month_options,
+            index=11,
+            key=f"{fee_type.lower()}_{region.lower()}_end_month",
+            label_visibility="collapsed"
+        )
+        end_month = month_values[month_options.index(end_month_display)]
+
+    # Calculate number of selected months
+    if end_month >= start_month:
+        num_months = end_month - start_month + 1
+    else:
+        num_months = 0
+
+    # Display selection info message (matching Tab 2 control panel style)
+    st.info(f"Selected {num_months} months for index selection")
+
+    # Get phasing baseline table (raw values, not formatted)
+    phasing_months_key = f'{fee_type.lower()}_phasing_months'
+    selected_months = control_panel_settings.get(phasing_months_key, [])
+
+    # Calculate raw phasing table for baseline extraction
+    if fee_type == 'FF':
+        # FF needs special calculation (FF - TTL_PL_FEE)
+        data_for_phasing = if_ff_store_data.copy()
+        data_for_phasing['FF_NON_PL'] = (
+            data_for_phasing['FF_N_USD_PLAN'] - data_for_phasing['TTL_PL_FEE_N_USD_PLAN']
+        )
+        phasing_column = 'FF_NON_PL'
+    else:
+        data_for_phasing = if_ff_store_data
+        phasing_column = metric_column
+
+    baseline_phasing_table_raw = calculate_phasing_table(data_for_phasing, phasing_column)
+
+    # Calculate baseline column (average of selected months)
+    if selected_months and len(selected_months) > 0:
+        valid_selected = [m for m in selected_months if m in baseline_phasing_table_raw.columns]
+        if valid_selected:
+            baseline_phasing_table_raw.insert(0, 'Baseline', baseline_phasing_table_raw[valid_selected].mean(axis=1))
+        else:
+            baseline_phasing_table_raw.insert(0, 'Baseline', pd.NA)
+    else:
+        baseline_phasing_table_raw.insert(0, 'Baseline', pd.NA)
+
+    current_date = control_panel_settings['current_date']
+
+    # Data Section
+    st.markdown("---")
+    st.markdown("##### Data")
+
+    # Build data table
+    monthly_data = build_monthly_data_table(
+        data=if_ff_store_data,
+        metric_column=metric_column,
+        region_filter=REGION_FILTERS[region],
+        current_date=current_date,
+        baseline_phasing_table=baseline_phasing_table_raw
+    )
+
+    # Calculate baseline row from selected index months
+    index_months = list(range(start_month, end_month + 1))
+    baseline_row = calculate_monthly_baseline_row(monthly_data, index_months)
+
+    # Insert baseline row at the top (Row 0)
+    baseline_df = pd.DataFrame([baseline_row])
+    baseline_df = baseline_df.set_index('MONTH_OF_YEAR_ID')
+    monthly_data = pd.concat([baseline_df, monthly_data])
+
+    # Apply Run Rate logic: Fill 2026 Index Baseline where no 2026 actual exists
+    baseline_2026 = baseline_row[2026]
+    for month in monthly_data.index:
+        if month != 'Index/Baseline':  # Skip the baseline row itself
+            value_2026 = monthly_data.loc[month, 2026]
+
+            if pd.notna(value_2026):
+                # Has 2026 actual data, leave Index Baseline as None
+                monthly_data.loc[month, '2026 Index Baseline'] = None
+            else:
+                # No 2026 actual data, use baseline value
+                if pd.notna(baseline_2026):
+                    monthly_data.loc[month, '2026 Index Baseline'] = baseline_2026
+                else:
+                    monthly_data.loc[month, '2026 Index Baseline'] = None
+
+    # Format for display (number format with thousand separators, no decimals)
+    monthly_data_display = format_monthly_data_for_display(monthly_data, format_type='number')
+
+    st.dataframe(monthly_data_display, use_container_width=True, height=500)
+
+
+def render_tab3(if_ff_store_data):
+    """
+    Main render function for Tab 3 - IF/FF/Store Forecast
+
+    Args:
+        if_ff_store_data: DataFrame with IF/FF/Store data
+    """
+    if if_ff_store_data is None:
+        st.warning("⚠️ IF/FF/Store data not available. Please retrieve data first.")
+        return
+
+    # Render Control Panel and Phasing Tables
+    control_panel_settings = render_control_panel_and_phasing_tables(if_ff_store_data)
+
+    # Render IF Forecast - ICBT only for now
+    render_fee_forecast_section(
+        fee_type='IF',
+        if_ff_store_data=if_ff_store_data,
+        control_panel_settings=control_panel_settings,
+        metric_column='IF_N_USD_PLAN',
+        fee_display_name='IF (Insertion Fee)',
+        region='ICBT'
+    )

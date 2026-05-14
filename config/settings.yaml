@@ -1,0 +1,42 @@
+# iCBT Take Rate Forecast - Configuration Settings
+
+app:
+  title: "iCBT Take Rate Forecast Dashboard"
+  page_icon: "📊"
+  layout: "wide"
+
+files:
+  fvf_filename: "02 FVF_hazel.xlsx"
+  if_ff_filename: "03 IF_FF_FX_Forecast_hazel.xlsx"
+  tr_summary_filename: "05 TR_Summary.xlsx"
+
+data:
+  raw_folder: "data/raw"
+  processed_folder: "data/processed"
+
+regions:
+  - ICBT
+  - GC
+  - HIS
+  - JPKO
+
+metrics:
+  fee_types:
+    - IF_G_USD_PLAN
+    - IF_C_USD_PLAN
+    - FF_G_USD_PLAN
+    - FF_C_USD_PLAN
+    - FVF_G_USD_PLAN
+    - FVF_C_USD_PLAN
+    - CBT_FEE_G_USD_PLAN
+    - CBT_FEE_C_USD_PLAN
+
+  fvf_components:
+    - FVF_BASE
+    - FVF_REGULATORY
+    - FVF_SNAD
+    - FVF_BSTD
+    - FVF_BuyerProtect
+
+cache:
+  ttl_hours: 24

@@ -1,0 +1,12 @@
+streamlit
+pandas
+openpyxl
+plotly
+xlsxwriter
+pyyaml
+numpy
+jaydebeapi
+JPype1
+prophet
+xgboost
+scikit-learn
