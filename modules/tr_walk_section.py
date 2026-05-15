@@ -82,7 +82,7 @@ def display_walk_section(
         )
 
     with row2_col3:
-        # Calculate and display Buffer/Stretch
+        # Calculate and display Adjustment
         walk_buffer_stretch, buffer_msg = calculate_buffer_stretch(
             walk_from_version,
             walk_start_date,
@@ -227,6 +227,6 @@ def display_walk_results(walk_metrics, walk_title=""):
     tr_walk_ui.display_fvf_walk_section(
         walk_metrics['fvf_walk_data'],
         walk_metrics['txn_tr_walk'],
-        walk_metrics['waterfall_data']['Buffer/Stretch'],
+        walk_metrics['waterfall_data']['Adjustment'],
         walk_title
     )
