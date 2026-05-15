@@ -17,7 +17,7 @@ def calculate_walk_metrics(df_from, df_to, start_date, end_date, buffer_stretch=
     - df_to: DataFrame for 'Walk To' version
     - start_date: Start date for the comparison period
     - end_date: End date for the comparison period
-    - buffer_stretch: Buffer/Stretch value for waterfall chart
+    - buffer_stretch: Adjustment value for waterfall chart
 
     Returns:
     - Dictionary containing calculated metrics for all walk tables
@@ -144,7 +144,7 @@ def calculate_waterfall_bridge(take_rate_pct, buffer_stretch=0.0):
 
     Parameters:
     - take_rate_pct: Take rate percentage metrics
-    - buffer_stretch: Buffer/Stretch value (calculated or provided)
+    - buffer_stretch: Adjustment value (calculated or provided)
     """
 
     # Get Total TXN TR
@@ -168,7 +168,7 @@ def calculate_waterfall_bridge(take_rate_pct, buffer_stretch=0.0):
 
     waterfall_data = {
         'Submission': submission,
-        'Buffer/Stretch': buffer_stretch,
+        'Adjustment': buffer_stretch,
         'Realistic': realistic,
         'Components': components
     }

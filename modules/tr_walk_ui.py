@@ -93,9 +93,9 @@ def display_waterfall_chart(txn_tr_walk, buffer_stretch, walk_title=""):
 
     Structure:
     - Submission (= Subtotal of Walk From (%))
-    - Buffer/Stretch (= Buffer/Stretch in configuration)
-    - Realistic (= Submission + Buffer/Stretch)
-    - FVF (= FVF Delta (%) - Buffer/Stretch)
+    - Adjustment (= Adjustment in configuration)
+    - Realistic (= Submission + Adjustment)
+    - FVF (= FVF Delta (%) - Adjustment)
     - IF (= IF Delta (%))
     - FF non-PL (= FF non-PL Delta (%))
     - Store (= Store Delta (%))
@@ -118,7 +118,7 @@ def display_waterfall_chart(txn_tr_walk, buffer_stretch, walk_title=""):
 
     submission = (subtotal_from / gmv_from * 100)  # percentage
 
-    # Calculate Realistic = Submission + Buffer/Stretch
+    # Calculate Realistic = Submission + Adjustment
     realistic = submission + (buffer_stretch * 100)  # Convert buffer_stretch to percentage
 
     # Calculate Walk From (%) and Walk To (%) for each component
@@ -140,7 +140,7 @@ def display_waterfall_chart(txn_tr_walk, buffer_stretch, walk_title=""):
     ff_delta = ff_to_pct - ff_from_pct
     store_delta = store_to_pct - store_from_pct
 
-    # FVF delta needs to subtract buffer/stretch
+    # FVF delta needs to subtract adjustment
     fvf_delta_adjusted = fvf_delta - (buffer_stretch * 100)
 
     # Calculate Current Forecast as Subtotal of Walk To (%)
@@ -152,7 +152,7 @@ def display_waterfall_chart(txn_tr_walk, buffer_stretch, walk_title=""):
     current_forecast = (subtotal_to / gmv_to * 100)  # percentage
 
     # Build waterfall data
-    x_labels = ['Submission', 'Buffer/Stretch', 'Realistic', 'FVF', 'IF', 'FF non-PL', 'Store', 'Current Forecast']
+    x_labels = ['Submission', 'Adjustment', 'Realistic', 'FVF', 'IF', 'FF non-PL', 'Store', 'Current Forecast']
     measures = ['absolute', 'relative', 'total', 'relative', 'relative', 'relative', 'relative', 'total']
     values = [submission, buffer_stretch * 100, realistic, fvf_delta_adjusted, if_delta, ff_delta, store_delta, current_forecast]
 
@@ -340,9 +340,9 @@ def display_fvf_walk_waterfall(fvf_walk_data, txn_tr_walk, buffer_stretch, walk_
 
     Structure (similar to TXN TR Walk Waterfall):
     - Submission (FVF Walk From (%))
-    - Buffer/Stretch
-    - Realistic (= Submission + Buffer/Stretch)
-    - Variable (= Variable Delta (%) - Buffer/Stretch)  **Special calculation**
+    - Adjustment
+    - Realistic (= Submission + Adjustment)
+    - Variable (= Variable Delta (%) - Adjustment)  **Special calculation**
     - International, BSTD, eTRS, SNAD, Fixed, Credit, Regulatory, Buyer Protection (= Delta (%))
     - Current Forecast (FVF Walk To (%))
     """
@@ -363,7 +363,7 @@ def display_fvf_walk_waterfall(fvf_walk_data, txn_tr_walk, buffer_stretch, walk_
         if comp in fvf_walk_data:
             submission += fvf_walk_data[comp].get('Walk From (%)', 0)
 
-    # Calculate Realistic = Submission + Buffer/Stretch
+    # Calculate Realistic = Submission + Adjustment
     realistic = submission + (buffer_stretch * 100)
 
     # Calculate Current Forecast as sum of all FVF components Walk To (%)
@@ -380,7 +380,7 @@ def display_fvf_walk_waterfall(fvf_walk_data, txn_tr_walk, buffer_stretch, walk_
             walk_to_pct = fvf_walk_data[comp].get('Walk To (%)', 0)
             delta = walk_to_pct - walk_from_pct
 
-            # Special handling for Variable: subtract buffer/stretch
+            # Special handling for Variable: subtract adjustment
             if comp == 'Variable':
                 delta = delta - (buffer_stretch * 100)
 
@@ -389,7 +389,7 @@ def display_fvf_walk_waterfall(fvf_walk_data, txn_tr_walk, buffer_stretch, walk_
             deltas[comp] = 0
 
     # Build waterfall data
-    x_labels = ['Submission', 'Buffer/Stretch', 'Realistic']
+    x_labels = ['Submission', 'Adjustment', 'Realistic']
     measures = ['absolute', 'relative', 'total']
     values = [submission, buffer_stretch * 100, realistic]
 

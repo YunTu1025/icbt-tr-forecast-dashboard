@@ -91,7 +91,7 @@ def display_walk_section(
             tab5_prior_forecast_df
         )
 
-        st.markdown("<p style='font-size: 0.9em;'>Buffer/Stretch</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 0.9em;'>Adjustment</p>", unsafe_allow_html=True)
         st.markdown(
             f"<p style='font-weight: bold; text-decoration: underline; font-size: 1.4em;'>{walk_buffer_stretch*100:.3f}%</p>",
             unsafe_allow_html=True
@@ -131,7 +131,7 @@ def display_walk_section(
 
 def calculate_buffer_stretch(from_version, start_date, end_date, budget_df, prior_forecast_df):
     """
-    Calculate Buffer/Stretch value
+    Calculate Adjustment value
 
     Returns:
     - buffer_stretch: Float value (percentage as decimal, e.g., 0.05 for 5%)
@@ -219,7 +219,7 @@ def display_walk_results(walk_metrics, walk_title=""):
         st.markdown("#### 🌊 TXN TR Walk Waterfall")
         tr_walk_ui.display_waterfall_chart(
             walk_metrics['txn_tr_walk'],
-            walk_metrics['waterfall_data']['Buffer/Stretch'],
+            walk_metrics['waterfall_data']['Adjustment'],
             walk_title
         )
 
